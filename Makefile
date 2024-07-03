@@ -21,11 +21,11 @@ SRCS_S		= \
 			$(SRCSDIR)/server.c \
 
 
-OBJSDIR		= objs
+OBJSDIR		= objs_client
 OBJS		= $(addprefix $(OBJSDIR)/, $(SRCS:.c=.o))
 DEPS		= $(addprefix $(OBJSDIR)/, $(SRCS:.c=.d))
 
-OBJSDIR_S	= OBJS_S
+OBJSDIR_S	= objs_server
 OBJS_S		= $(addprefix $(OBJSDIR_S)/, $(SRCS_S:.c=.o))
 DEPS_S		= $(addprefix $(OBJSDIR_S)/, $(SRCS_S:.c=.d))
 
@@ -40,9 +40,7 @@ LIBFT		= ${LIBDIR}/libft.a
 ######                               RULES                                ######
 ################################################################################
 
-all		: $(NAME)
-
-bonus	: $(NAME_S)
+all		: $(NAME) $(NAME_S)
 
 $(NAME)	: ${OBJS}
 		$(MAKE) -C ${LIBDIR} all
@@ -72,11 +70,6 @@ re		:
 		$(MAKE) -C ${LIBDIR} fclean
 		$(RM) $(OBJSDIR) $(NAME)
 		$(MAKE) all
-
-res		:
-		$(MAKE) -C ${LIBDIR} fclean
-		$(RM) $(OBJSDIR_S) $(NAME_S)
-		$(MAKE) bonus
 
 -include $(DEPS)
 
