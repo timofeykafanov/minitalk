@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   client.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: tkafanov <tkafanov@student.42vienna.com    +#+  +:+       +#+        */
+/*   By: tkafanov <tkafanov@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 10:34:28 by tkafanov          #+#    #+#             */
-/*   Updated: 2024/07/05 12:34:41 by tkafanov         ###   ########.fr       */
+/*   Updated: 2024/07/11 17:41:00 by tkafanov         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,16 +36,23 @@ static bool	is_string_valid(char *str)
 	return (true);
 }
 
-static void	response(int signo)
+static void	response(int signo, siginfo_t *info, void *useless)
 {
-	(void)signo;
-	ft_printf(" response received\n", STDOUT_FILENO);
+	(void)info;
+	(void)useless;
+	if (signo == SIGUSR1)
+		ft_printf(" response received\n", STDOUT_FILENO);
+	else if (signo == SIGUSR2)
+	{
+		ft_printf("Server successfully received the message!\n\n", STDOUT_FILENO);
+		exit(SUCCESS);
+	}
 	g_response_received = true;
 }
 
 static void	send_symbol(int process_id, char symbol)
 {
-	int 		i;
+	int	i;
 
 	i = 7;
 	while (i >= 0)
@@ -65,7 +72,7 @@ static void	send_symbol(int process_id, char symbol)
 		g_response_received = false;
 		if (!g_response_received)
 		{
-			sleep(10);
+			sleep(4);
 			if (!g_response_received)
 			{
 				ft_printf("Error! No response was received from the server!\n", STDERR_FILENO);
@@ -97,7 +104,7 @@ static void	send_len(int process_id, int len)
 		g_response_received = false;
 		if (!g_response_received)
 		{
-			sleep(10);
+			sleep(4);
 			if (!g_response_received)
 			{
 				ft_printf("Error! No response was received from the server!\n", STDERR_FILENO);
@@ -121,16 +128,22 @@ static void	send_message(int process_id, char *message)
 
 int	main(int ac, char **av)
 {
-	int	process_id;
+	struct sigaction	sa;
+	int					process_id;
 
 	if (ac == 3)
 	{
+		sa.sa_sigaction = response;
+		sa.sa_flags = SA_SIGINFO;
 		process_id = ft_atoi(av[1]);
 		if (!is_process_id_valid(av[1], process_id))
 			return (ERROR);
 		if (!is_string_valid(av[2]))
 			return (ERROR);
-		signal(SIGUSR1, response);
+		if (sigaction(SIGUSR1, &sa, NULL) == -1
+		|| sigaction(SIGUSR2, &sa, NULL) == -1)
+		return (ERROR);
+		usleep(10000);
 		send_message(process_id, av[2]);
 	}
 	else

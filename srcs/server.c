@@ -3,76 +3,100 @@
 /*                                                        :::      ::::::::   */
 /*   server.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: tkafanov <tkafanov@student.42vienna.com    +#+  +:+       +#+        */
+/*   By: tkafanov <tkafanov@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 10:34:34 by tkafanov          #+#    #+#             */
-/*   Updated: 2024/07/05 14:16:46 by tkafanov         ###   ########.fr       */
+/*   Updated: 2024/07/11 16:54:58 by tkafanov         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/minitalk.h"
 #include <unistd.h>
 
-t_data	g_data;
+bool	g_in_process = false;
+
+static int	receive_len(int signo, int len)
+{
+	if (signo == SIGUSR1)
+		return (len * 2);
+	else if (signo == SIGUSR2)
+		return (len * 2 + 1);
+	return (len);
+}
 
 void	sig_usr(int signo, siginfo_t *info, void *useless)
 {
-	// static int	count = 0;
-	// static char	symbol = 0;
+	static int	bits = 1;
+	static int	len = 0;
+	static int	counter = 0;
+	static char	*str;
+	static char	symbol;
 
 	(void)useless;
-	// (void)signo;
-	usleep(1000);
+	g_in_process = true;
+	if (bits <= 32)
+	{
+		len = receive_len(signo, len);
+		if (bits == 32)
+		{
+			str = (char *)malloc((len  + 1) * sizeof(char));
+			if (!str)
+			{
+				ft_printf("Error! Allocation failed!\n", STDERR_FILENO);
+				exit(ERROR);
+			}
+			len = 0;
+		}
+		bits++;
+	}
+	else
+	{
+		if (signo == SIGUSR1)
+			symbol = symbol * 2;
+		else if (signo == SIGUSR2)
+			symbol = symbol * 2 + 1;
+		counter++;
+	}
+	if (counter == 8)
+	{
+		str[len] = symbol;
+		counter = 0;
+		if (symbol == '\0')
+		{
+			ft_printf("%s\n", STDOUT_FILENO, str);
+			free(str);
+			bits = 1;
+			kill(info->si_pid, SIGUSR2);
+			g_in_process = false;
+			return ;
+		}
+		symbol = 0;
+		len++;
+	}
 	kill(info->si_pid, SIGUSR1);
-	// if (g_data.bits <= 32)
-	// 	return ;
-
-	if (signo == SIGUSR1)
-	{
-		g_data.last_bit = 0;
-		// symbol = symbol << 1;
-		// count++;
-	}
-	else if (signo == SIGUSR2)
-	{
-		g_data.last_bit = 1;
-		// symbol = (symbol << 1) | 1;
-		// count++;
-	}
-	// if (count == 8)
-	// {
-	// 	ft_printf("%c", STDOUT_FILENO, symbol);
-	// 	count = 0;
-	// 	symbol = 0;
-	// }
 }
 
 int	main(void)
 {
 	struct sigaction	sa;
-	sigset_t			set;
+	// sigset_t			set;
 
-	ft_bzero(&g_data, sizeof(g_data));
 	ft_printf("Process ID: %d\n", STDOUT_FILENO, getpid());
 	sa.sa_sigaction = sig_usr;
 	sa.sa_flags = SA_SIGINFO;
-	sigfillset(&set);
-	sa.sa_mask = set;
+	// sigfillset(&set);
+	// sa.sa_mask = set;
 	if (sigaction(SIGUSR1, &sa, NULL) == -1
 		|| sigaction(SIGUSR2, &sa, NULL) == -1)
 		return (ERROR);
 	while (1)
 	{
-		if (g_data.bits > 32)
-			return (0);
-		if (g_data.bits <= 32)
-		{
-			ft_printf("last bit = %d\n", STDOUT_FILENO, g_data.last_bit);
-			g_data.size = g_data.size * 2 + g_data.last_bit;
-		}
-		ft_printf("len = %d\n", STDOUT_FILENO, g_data.size);
-		ft_printf("bits = %d\n", STDOUT_FILENO, g_data.bits);
-		g_data.bits++;
+		// if (g_in_process)
+		// {
+		// 	sleep(10);
+		// 	return (write(STDOUT_FILENO, "Error! The client has stopped sending signals!\n", 47), ERROR);
+		// }
+		// else
 		pause();
 	}
 	return (SUCCESS);
