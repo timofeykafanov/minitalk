@@ -6,14 +6,11 @@
 /*   By: tkafanov <tkafanov@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 10:34:34 by tkafanov          #+#    #+#             */
-/*   Updated: 2024/07/11 16:54:58 by tkafanov         ###   ########.fr       */
+/*   Updated: 2024/07/12 10:10:09 by tkafanov         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/minitalk.h"
-#include <unistd.h>
-
-bool	g_in_process = false;
 
 static int	receive_len(int signo, int len)
 {
@@ -33,7 +30,6 @@ void	sig_usr(int signo, siginfo_t *info, void *useless)
 	static char	symbol;
 
 	(void)useless;
-	g_in_process = true;
 	if (bits <= 32)
 	{
 		len = receive_len(signo, len);
@@ -67,7 +63,6 @@ void	sig_usr(int signo, siginfo_t *info, void *useless)
 			free(str);
 			bits = 1;
 			kill(info->si_pid, SIGUSR2);
-			g_in_process = false;
 			return ;
 		}
 		symbol = 0;
@@ -79,25 +74,17 @@ void	sig_usr(int signo, siginfo_t *info, void *useless)
 int	main(void)
 {
 	struct sigaction	sa;
-	// sigset_t			set;
+	sigset_t			set;
 
 	ft_printf("Process ID: %d\n", STDOUT_FILENO, getpid());
 	sa.sa_sigaction = sig_usr;
 	sa.sa_flags = SA_SIGINFO;
-	// sigfillset(&set);
-	// sa.sa_mask = set;
+	sigfillset(&set);
+	sa.sa_mask = set;
 	if (sigaction(SIGUSR1, &sa, NULL) == -1
 		|| sigaction(SIGUSR2, &sa, NULL) == -1)
 		return (ERROR);
 	while (1)
-	{
-		// if (g_in_process)
-		// {
-		// 	sleep(10);
-		// 	return (write(STDOUT_FILENO, "Error! The client has stopped sending signals!\n", 47), ERROR);
-		// }
-		// else
 		pause();
-	}
 	return (SUCCESS);
 }
