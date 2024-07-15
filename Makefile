@@ -15,10 +15,12 @@ INCLUDES	= includes
 
 SRCS		= \
 			$(SRCSDIR)/client.c \
+			$(SRCSDIR)/client_utils.c \
 
 
 SRCS_S		= \
 			$(SRCSDIR)/server.c \
+			$(SRCSDIR)/server_utils.c \
 
 
 OBJSDIR		= objs_client

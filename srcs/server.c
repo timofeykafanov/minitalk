@@ -3,25 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   server.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: tkafanov <tkafanov@student.42.fr>          +#+  +:+       +#+        */
+/*   By: tkafanov <tkafanov@student.42vienna.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 10:34:34 by tkafanov          #+#    #+#             */
-/*   Updated: 2024/07/12 10:10:09 by tkafanov         ###   ########.fr       */
+/*   Updated: 2024/07/15 09:39:56 by tkafanov         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/minitalk.h"
 
-static int	receive_len(int signo, int len)
-{
-	if (signo == SIGUSR1)
-		return (len * 2);
-	else if (signo == SIGUSR2)
-		return (len * 2 + 1);
-	return (len);
-}
-
-void	sig_usr(int signo, siginfo_t *info, void *useless)
+static void	sig_usr(int signo, siginfo_t *info, void *useless)
 {
 	static int	bits = 1;
 	static int	len = 0;
@@ -31,44 +22,20 @@ void	sig_usr(int signo, siginfo_t *info, void *useless)
 
 	(void)useless;
 	if (bits <= 32)
-	{
-		len = receive_len(signo, len);
-		if (bits == 32)
-		{
-			str = (char *)malloc((len  + 1) * sizeof(char));
-			if (!str)
-			{
-				ft_printf("Error! Allocation failed!\n", STDERR_FILENO);
-				exit(ERROR);
-			}
-			len = 0;
-		}
-		bits++;
-	}
+		handle_len(signo, &len, &bits, &str);
 	else
-	{
-		if (signo == SIGUSR1)
-			symbol = symbol * 2;
-		else if (signo == SIGUSR2)
-			symbol = symbol * 2 + 1;
-		counter++;
-	}
+		handle_symbol(&symbol, &counter, signo);
 	if (counter == 8)
 	{
 		str[len] = symbol;
 		counter = 0;
 		if (symbol == '\0')
-		{
-			ft_printf("%s\n", STDOUT_FILENO, str);
-			free(str);
-			bits = 1;
-			kill(info->si_pid, SIGUSR2);
-			return ;
-		}
+			return (handle_end(&str, &bits, info));
 		symbol = 0;
 		len++;
 	}
-	kill(info->si_pid, SIGUSR1);
+	if (kill(info->si_pid, SIGUSR1) == -1)
+		handle_kill_protection(bits, &str);
 }
 
 int	main(void)
@@ -76,7 +43,7 @@ int	main(void)
 	struct sigaction	sa;
 	sigset_t			set;
 
-	ft_printf("Process ID: %d\n", STDOUT_FILENO, getpid());
+	ft_printf(PID, STDOUT_FILENO, getpid());
 	sa.sa_sigaction = sig_usr;
 	sa.sa_flags = SA_SIGINFO;
 	sigfillset(&set);
